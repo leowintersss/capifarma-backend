@@ -314,6 +314,105 @@ app.post('/api/historia-clinica', async (req, res) => {
   }
 });
 
+// ==========================================
+// ACTUALIZAR PRODUCTO (PRECIO Y STOCK MANUAL) - v0.0.2
+// ==========================================
+app.put('/api/productos/:id', async (req, res) => {
+  const { id } = req.params;
+  const { precio_unitario, stock, stock_minimo, actualizado_por } = req.body;
+  const safeActualizadoPor = !isNaN(parseInt(actualizado_por)) ? parseInt(actualizado_por, 10) : 1;
+
+  try {
+    const query = `
+      UPDATE productos 
+      SET precio_unitario = $1, stock = $2, stock_minimo = $3, actualizado_por = $4
+      WHERE id = $5
+      RETURNING *;
+    `;
+    const values = [
+      parseFloat(precio_unitario),
+      parseInt(stock, 10),
+      parseInt(stock_minimo, 10) || 5,
+      safeActualizadoPor,
+      parseInt(id, 10)
+    ];
+
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Producto no encontrado.' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Producto actualizado correctamente',
+      producto: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error al actualizar producto:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==========================================
+// ACTUALIZAR HISTORIA CLÍNICA - v0.0.2
+// ==========================================
+app.put('/api/historia-clinica/:id', async (req, res) => {
+  const { id } = req.params;
+  const { 
+    antecedentes_heredo_familiares,
+    antecedentes_personales_no_patologicos,
+    antecedentes_personales_patologicos,
+    padecimiento_actual,
+    exploracion_fisica,
+    analisis_laboratorios,
+    diagnostico,
+    plan_pronostico
+  } = req.body;
+
+  try {
+    const query = `
+      UPDATE historias_clinicas 
+      SET antecedentes_heredo_familiares = $1,
+          antecedentes_personales_no_patologicos = $2,
+          antecedentes_personales_patologicos = $3,
+          padecimiento_actual = $4,
+          exploracion_fisica = $5,
+          analisis_laboratorios = $6,
+          diagnostico = $7,
+          plan_pronostico = $8
+      WHERE id = $9
+      RETURNING *;
+    `;
+    const values = [
+      antecedentes_heredo_familiares || '',
+      antecedentes_personales_no_patologicos || '',
+      antecedentes_personales_patologicos || '',
+      padecimiento_actual || '',
+      exploracion_fisica || '',
+      analisis_laboratorios || '',
+      diagnostico || '',
+      plan_pronostico || '',
+      parseInt(id, 10)
+    ];
+
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Historia clínica no encontrada.' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Historia clínica actualizada correctamente',
+      historia: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error al actualizar historia clínica:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo exitosamente en el puerto ${PORT}`);
